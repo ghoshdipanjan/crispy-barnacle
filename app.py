@@ -51,6 +51,8 @@ def create_app(test_config=None):
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (list_id) REFERENCES todo_lists (id) ON DELETE CASCADE
             );
+            CREATE INDEX IF NOT EXISTS idx_todo_items_list_id
+                ON todo_items (list_id);
             """
         )
         db.commit()
@@ -229,10 +231,9 @@ def create_app(test_config=None):
             "DELETE FROM todo_items WHERE id = ? AND list_id = ?",
             (item_id, list_id),
         )
-        if cursor.rowcount == 0:
-            get_db().rollback()
-            return jsonify({"error": "item not found"}), 404
         get_db().commit()
+        if cursor.rowcount == 0:
+            return jsonify({"error": "item not found"}), 404
         return "", 204
 
     with app.app_context():
