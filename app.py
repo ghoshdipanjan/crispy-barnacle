@@ -14,11 +14,12 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    os.makedirs(app.instance_path, exist_ok=True)
+    database_path = os.path.abspath(app.config["DATABASE"])
+    os.makedirs(os.path.dirname(database_path), exist_ok=True)
 
     def get_db():
         if "db" not in g:
-            g.db = sqlite3.connect(app.config["DATABASE"])
+            g.db = sqlite3.connect(app.config["DATABASE"], timeout=10)
             g.db.row_factory = sqlite3.Row
             g.db.execute("PRAGMA foreign_keys = ON")
         return g.db
@@ -99,7 +100,16 @@ def create_app(test_config=None):
     @app.get("/api/lists")
     def get_lists():
         rows = get_db().execute("SELECT * FROM todo_lists ORDER BY id").fetchall()
-        return jsonify([list_json(row) for row in rows])
+        items = get_db().execute("SELECT * FROM todo_items ORDER BY id").fetchall()
+        items_by_list = {row["id"]: [] for row in rows}
+        for item in items:
+            items_by_list[item["list_id"]].append(item_json(item))
+        result = []
+        for row in rows:
+            todo_list = list_json(row, include_items=False)
+            todo_list["items"] = items_by_list[row["id"]]
+            result.append(todo_list)
+        return jsonify(result)
 
     @app.post("/api/lists")
     def create_list():
@@ -200,6 +210,7 @@ def create_app(test_config=None):
             (item_id, list_id),
         )
         if cursor.rowcount == 0:
+            get_db().rollback()
             return jsonify({"error": "item not found"}), 404
         get_db().commit()
         return "", 204

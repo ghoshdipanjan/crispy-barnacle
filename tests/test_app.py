@@ -24,6 +24,11 @@ def test_list_and_item_lifecycle(client):
     assert item["completed"] is False
 
     response = client.patch(
+        f"/api/lists/{todo_list['id']}", json={"name": "Weekly groceries"}
+    )
+    assert response.get_json()["name"] == "Weekly groceries"
+
+    response = client.patch(
         f"/api/lists/{todo_list['id']}/items/{item['id']}",
         json={"completed": True},
     )
@@ -62,6 +67,10 @@ def test_validation_and_missing_resources(client):
             json={"completed": "yes"},
         ).status_code
         == 400
+    )
+    assert (
+        client.delete(f"/api/lists/{todo_list['id']}/items/999").status_code
+        == 404
     )
 
 

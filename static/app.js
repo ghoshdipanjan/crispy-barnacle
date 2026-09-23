@@ -4,8 +4,8 @@ const listForm = document.querySelector("#new-list-form");
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: { "Content-Type": "application/json", ...options.headers },
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
