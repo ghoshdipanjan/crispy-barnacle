@@ -4,6 +4,9 @@ import sqlite3
 from flask import Flask, g, jsonify, render_template, request
 
 
+MAX_NAME_LENGTH = 200
+
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
@@ -15,6 +18,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     database_path = os.path.abspath(app.config["DATABASE"])
+    app.config["DATABASE"] = database_path
     os.makedirs(os.path.dirname(database_path), exist_ok=True)
 
     def get_db():
@@ -82,7 +86,15 @@ def create_app(test_config=None):
         if data is None or not isinstance(data.get("name"), str):
             return None
         name = data["name"].strip()
-        return name if 0 < len(name) <= 200 else None
+        return name if 0 < len(name) <= MAX_NAME_LENGTH else None
+
+    def invalid_name():
+        return jsonify(
+            {"error": f"name must be between 1 and {MAX_NAME_LENGTH} characters"}
+        ), 400
+
+    def invalid_json():
+        return jsonify({"error": "request body must be a JSON object"}), 400
 
     def find_list(list_id):
         return get_db().execute(
@@ -113,9 +125,12 @@ def create_app(test_config=None):
 
     @app.post("/api/lists")
     def create_list():
-        name = valid_name(json_body())
+        data = json_body()
+        if data is None:
+            return invalid_json()
+        name = valid_name(data)
         if name is None:
-            return jsonify({"error": "name must be between 1 and 200 characters"}), 400
+            return invalid_name()
         cursor = get_db().execute(
             "INSERT INTO todo_lists (name) VALUES (?)", (name,)
         )
@@ -133,9 +148,12 @@ def create_app(test_config=None):
     def update_list(list_id):
         if find_list(list_id) is None:
             return jsonify({"error": "list not found"}), 404
-        name = valid_name(json_body())
+        data = json_body()
+        if data is None:
+            return invalid_json()
+        name = valid_name(data)
         if name is None:
-            return jsonify({"error": "name must be between 1 and 200 characters"}), 400
+            return invalid_name()
         get_db().execute(
             "UPDATE todo_lists SET name = ? WHERE id = ?", (name, list_id)
         )
@@ -154,9 +172,12 @@ def create_app(test_config=None):
     def create_item(list_id):
         if find_list(list_id) is None:
             return jsonify({"error": "list not found"}), 404
-        name = valid_name(json_body())
+        data = json_body()
+        if data is None:
+            return invalid_json()
+        name = valid_name(data)
         if name is None:
-            return jsonify({"error": "name must be between 1 and 200 characters"}), 400
+            return invalid_name()
         cursor = get_db().execute(
             "INSERT INTO todo_items (list_id, name) VALUES (?, ?)", (list_id, name)
         )
@@ -176,7 +197,9 @@ def create_app(test_config=None):
             return jsonify({"error": "item not found"}), 404
 
         data = json_body()
-        if data is None or not ({"name", "completed"} & data.keys()):
+        if data is None:
+            return invalid_json()
+        if not ({"name", "completed"} & data.keys()):
             return jsonify({"error": "name or completed is required"}), 400
 
         name = row["name"]
@@ -184,10 +207,7 @@ def create_app(test_config=None):
         if "name" in data:
             name = valid_name(data)
             if name is None:
-                return (
-                    jsonify({"error": "name must be between 1 and 200 characters"}),
-                    400,
-                )
+                return invalid_name()
         if "completed" in data:
             if not isinstance(data["completed"], bool):
                 return jsonify({"error": "completed must be a boolean"}), 400

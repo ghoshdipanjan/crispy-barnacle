@@ -50,14 +50,21 @@ def test_list_and_item_lifecycle(client):
 
 def test_validation_and_missing_resources(client):
     assert client.post("/api/lists", json={"name": "  "}).status_code == 400
-    assert client.post("/api/lists", data="not json").status_code == 400
+    response = client.post("/api/lists", data="not json")
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "request body must be a JSON object"
     assert client.get("/api/lists/999").status_code == 404
+    assert client.patch("/api/lists/999", json={"name": "New"}).status_code == 404
     assert (
         client.post("/api/lists/999/items", json={"name": "Milk"}).status_code
         == 404
     )
 
     todo_list = client.post("/api/lists", json={"name": "Shop"}).get_json()
+    assert (
+        client.patch(f"/api/lists/{todo_list['id']}", json={"name": " "}).status_code
+        == 400
+    )
     item = client.post(
         f"/api/lists/{todo_list['id']}/items", json={"name": "Bread"}
     ).get_json()
