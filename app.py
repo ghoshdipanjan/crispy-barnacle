@@ -117,7 +117,8 @@ def create_app(test_config=None):
         items = get_db().execute("SELECT * FROM todo_items ORDER BY id").fetchall()
         items_by_list = {row["id"]: [] for row in rows}
         for item in items:
-            items_by_list[item["list_id"]].append(item_json(item))
+            if item["list_id"] in items_by_list:
+                items_by_list[item["list_id"]].append(item_json(item))
         result = []
         for row in rows:
             todo_list = list_json(row, include_items=False)

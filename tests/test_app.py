@@ -68,6 +68,11 @@ def test_validation_and_missing_resources(client):
     item = client.post(
         f"/api/lists/{todo_list['id']}/items", json={"name": "Bread"}
     ).get_json()
+    response = client.patch(
+        f"/api/lists/{todo_list['id']}/items/{item['id']}", json={}
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "name or completed is required"
     assert (
         client.patch(
             f"/api/lists/{todo_list['id']}/items/{item['id']}",
