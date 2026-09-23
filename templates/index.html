@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shopping Lists</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Shopping companion</p>
+        <h1>My Lists</h1>
+        <p>Create a list, add what you need, and check off items as you shop.</p>
+      </header>
+
+      <form id="new-list-form" class="create-form">
+        <label class="sr-only" for="new-list-name">New list name</label>
+        <input id="new-list-name" name="name" maxlength="200" placeholder="Weekend groceries" required>
+        <button type="submit">Create list</button>
+      </form>
+
+      <p id="message" role="status" aria-live="polite"></p>
+      <section id="lists" aria-label="Shopping lists"></section>
+    </main>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
